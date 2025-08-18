@@ -1,0 +1,33 @@
+services:
+  api:
+    build: ./api          # path to your Express API Dockerfile
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongo
+      - redis
+
+  worker:
+    build: ./worker       # path to your background worker Dockerfile
+    depends_on:
+      - mongo
+      - redis
+
+  mongo:
+    build: ./mongo
+    ports:
+      - "27017:27017"
+
+  redis:
+    build: ./redis
+    ports:
+      - "6379:6379"
+
+
+  sink:
+    build: ./sink         # path to your webhook receiver Dockerfile
+    ports:
+      - "8080:8080"       # example port for sink
+    depends_on:
+      - mongo
+      - redis
