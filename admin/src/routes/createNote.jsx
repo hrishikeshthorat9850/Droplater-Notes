@@ -7,8 +7,6 @@ export default function CreateNote(){
     releaseAt : "",
     webhookUrl :""
   });
-  // const backendUrl = import.meta.env.VITE_API_URL;
-
   const handleInputChange = (e)=>{
     let {name,value} = e.target;
     setFormData((prev)=>({...prev,[name]:value}))
