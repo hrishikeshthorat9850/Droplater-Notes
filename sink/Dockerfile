@@ -1,14 +1,7 @@
-# sink/Dockerfile
-FROM node:20
-
-WORKDIR /usr/src/app
-
+FROM node:20-alpine
+WORKDIR /app
 COPY package*.json ./
 RUN npm install
-
 COPY . .
-
-# Expose the port your sink/webhook receiver listens on
-EXPOSE 8080
-
-CMD ["node", "index.js"]
+EXPOSE 4000
+CMD ["node", "sink.js"]

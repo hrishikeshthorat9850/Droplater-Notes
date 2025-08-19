@@ -73,7 +73,7 @@ async function startWorker() {
           await Note.findByIdAndUpdate(
             noteId,
             {
-              status: "delivered-via-sink",
+              status: "failed",
               deliveredAt: new Date(),
               $push: {
                 attempts: {
@@ -87,7 +87,7 @@ async function startWorker() {
             { new: true }
           );
 
-          return { status: "delivered-via-sink", noteId: newNote._id };
+          return { status: "failed", noteId: newNote._id };
 
         } catch (sinkErr) {
           // both webhook and sink failed → mark as failed

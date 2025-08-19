@@ -1,7 +1,5 @@
-// src/pages/Notes.jsx
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 
 export default function NotesPage() {
@@ -9,7 +7,7 @@ export default function NotesPage() {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch all notes
+  // Fetch notes
   const fetchNotes = async () => {
     setLoading(true);
     const res = await fetch("http://localhost:5000/api/notes");
@@ -18,11 +16,12 @@ export default function NotesPage() {
     setLoading(false);
   };
 
+  // onMount
   useEffect(() => {
     fetchNotes();
   }, []);
 
-  // Create new note
+  // Create note
   const onSubmit = async (values) => {
     await fetch("http://localhost:5000/api/notes", {
       method: "POST",
@@ -33,15 +32,15 @@ export default function NotesPage() {
     fetchNotes();
   };
 
-  // Replay (requeue)
-  const handleReplay = async (noteId) => {
-    await fetch(`http://localhost:5000/api/notes/${noteId}/replay`, {
+  // Replay note
+  const handleReplay = async (id) => {
+    await fetch(`http://localhost:5000/api/notes/${id}/replay`, {
       method: "POST",
     });
     fetchNotes();
   };
 
-  // Pulse variant
+  // Pulse animation
   const pulse = {
     delivered: {
       scale: [1, 1.05, 1],
@@ -51,36 +50,38 @@ export default function NotesPage() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-8">
-      {/* Create Form */}
+      {/* CREATE FORM */}
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="space-y-3 border p-4 rounded"
+        className="space-y-4 bg-white p-4 rounded shadow"
       >
-        <h2 className="font-semibold mb-2">Create Note</h2>
+        <h2 className="text-xl font-semibold">Create Note</h2>
         <input
-          placeholder="Title"
           {...register("title")}
-          className="border w-full p-2"
+          placeholder="Title"
+          className="w-full border p-2 rounded"
         />
         <textarea
-          placeholder="Body"
           {...register("body")}
-          className="border w-full p-2"
+          placeholder="Body"
+          className="w-full border p-2 rounded"
         />
         <input
-          placeholder="Release At (ISO format)"
           {...register("releaseAt")}
-          className="border w-full p-2"
+          type="datetime-local"
+          className="w-full border p-2 rounded"
         />
         <input
-          placeholder="Webhook URL"
           {...register("webhookUrl")}
-          className="border w-full p-2"
+          placeholder="Webhook URL"
+          className="w-full border p-2 rounded"
         />
-        <button className="border px-4 py-2">Create</button>
+        <button className="w-full bg-blue-600 text-white py-2 rounded">
+          Create
+        </button>
       </form>
 
-      {/* Table */}
+      {/* TABLE */}
       <div>
         <h2 className="font-semibold mb-2">Notes</h2>
         {loading ? (
@@ -98,8 +99,8 @@ export default function NotesPage() {
             </thead>
             <tbody>
               {notes.map((n) => {
-                const lastAttempt = n.attempts[n.attempts.length - 1];
-                const lastCode = lastAttempt?.statusCode ?? "-";
+                const last = n.attempts[n.attempts.length - 1];
+                const lastCode = last?.statusCode ?? "-";
                 const isDelivered =
                   n.status === "delivered" ||
                   n.status === "delivered-via-sink";
@@ -117,7 +118,10 @@ export default function NotesPage() {
                     <td className="border p-2">{lastCode}</td>
                     <td className="border p-2">
                       {n.status === "failed" && (
-                        <button onClick={() => handleReplay(n._id)}>
+                        <button
+                          className="text-blue-600"
+                          onClick={() => handleReplay(n._id)}
+                        >
                           Replay
                         </button>
                       )}
