@@ -10,7 +10,7 @@ const dbConnection = require("../mongo/MongoClient");
 const authMiddleware = require("../middleware/auth");
 const myQueue = require("../api/queue");
 const app = express();
-
+const mongoose = require("mongoose");
 // Allow all origins for development
 app.use(cors());
 app.use(express.json());
@@ -46,7 +46,7 @@ async function startServer() {
       //Add to Queue
       await myQueue.add("notes",
         {newNote},
-        {delay : 60 * 1000});    
+        {delay : 60 * 500});    
       // Send success response
       res.json({ 
         message: "Note created successfully & added to the queue...", 
@@ -98,7 +98,34 @@ async function startServer() {
     res.status(200).json({ ok: true });
   });
 
-  
+    // POST /api/notes/:id/replay
+app.post("/api/notes/:id/replay", async (req, res) => {
+  try {
+    const note = await Note.findById(req.params.id);
+
+    if (!note) {
+      return res.status(404).json({ error: "Note not found" });
+    }
+
+    // Only requeue if note is failed or dead
+    if (!["failed", "dead"].includes(note.status)) {
+      return res.status(400).json({ error: "Note cannot be replayed" });
+    }
+
+    // Reset status and add to queue
+    note.status = "pending";
+    note.deliveredAt = null;
+    await note.save();
+
+    await myQueue.add("notes", { newNote: note });
+
+    res.json({ message: "Note requeued successfully", noteId: note._id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });

@@ -8,6 +8,7 @@ export default function Notes() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+
   const fetchNotes = async () => {
     setLoading(true);
     setError(null);
@@ -37,11 +38,54 @@ export default function Notes() {
     } finally {
       setLoading(false);
     }
+  }
+  const sendToSink = async () => {
+    try {
+      const res = await fetch("http://localhost:4000/sink", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Idempotency-Key": "test123",
+        },
+        body: JSON.stringify({ message: "Hello from frontend" }),
+      });
+
+      const data = await res.text();
+      console.log("Sink response:", data);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
+
+
+  const handleReplay = async (id) => {
+    console.log("Id , when click Replay Button :",id);
+    try {
+      const response = await fetch(`http://localhost:5000/api/notes/${id}/replay`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to requeue note");
+      }
+
+      const data = await response.json();
+      console.log("Requeued:", data);
+      alert("Note requeued successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to requeue note");
+  }
+}
+
+  
   useEffect(() => {
     fetchNotes();
-  }, [page, status]);
+  }, []);
 
   return (
     <div>
@@ -64,7 +108,22 @@ export default function Notes() {
       {/* Notes list */}
       <ul>
         {notes.length > 0 ? (
-          notes.map((note) => <li key={note._id}>{note.title}</li>)
+          notes.map((note) => {
+            return(
+            <div key={note._id}>
+              <h4>Title : <b>{note.title}</b></h4>
+              <p>Status : <b>{note.status}</b></p>
+              {note.status== ("failed") &&
+              <div>
+                <button 
+                  onClick={()=>(handleReplay(note._id))}
+                >Replay</button>
+                <button onClick={sendToSink}>sendToSink</button>
+              </div>
+              }
+            </div>
+            )
+          })
         ) : (
           !loading && <li>No notes found.</li>
         )}
