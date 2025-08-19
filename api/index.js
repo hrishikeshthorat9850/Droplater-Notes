@@ -1,18 +1,26 @@
 // server.js or index.js
 const express = require("express");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
 const dotenv = require("dotenv");
 dotenv.config();
 const Note = require("../mongo/models/Notes");
 const { NoteZod } = require("../validation/zodValidation");
 const dbConnection = require("../mongo/MongoClient");
-
+const authMiddleware = require("../middleware/auth");
+const myQueue = require("../api/queue");
 const app = express();
 
 // Allow all origins for development
 app.use(cors());
 app.use(express.json());
 
+// 60 requests per minute / per IP
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+});
+app.use(limiter);
 const PORT = process.env.PORT || 5000;
 
 async function startServer() {
@@ -35,9 +43,13 @@ async function startServer() {
       // Insert into MongoDB
       const newNote = await Note.create(noteData);
 
+      //Add to Queue
+      await myQueue.add("notes",
+        {newNote},
+        {delay : 60 * 1000});    
       // Send success response
       res.json({ 
-        message: "Note created successfully", 
+        message: "Note created successfully & added to the queue...", 
         data:{
           id : newNote._id,...newNote.toObject()
         }
@@ -82,8 +94,11 @@ async function startServer() {
     }
   });
 
+  app.get("/health",authMiddleware, (req, res) => {
+    res.status(200).json({ ok: true });
+  });
 
-
+  
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
