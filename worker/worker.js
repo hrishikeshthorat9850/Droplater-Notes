@@ -7,7 +7,6 @@ const dbConnection = require("../mongo/MongoClient");
 const mongoose = require("mongoose");
 
 async function startWorker() {
-  // Connect to MongoDB first
   await dbConnection();
 
   const worker = new Worker(
@@ -16,10 +15,7 @@ async function startWorker() {
       const { newNote } = job.data;
       console.log("Processing Job:", job.id, newNote.title);
 
-      // Convert string _id to ObjectId
       const noteId = new mongoose.Types.ObjectId(newNote._id);
-
-      // Create a plain JS payload to avoid Mongoose serialization issues
       const payload = {
         title: newNote.title,
         body: newNote.body,
@@ -30,69 +26,89 @@ async function startWorker() {
       };
 
       try {
-        // Call the webhook
+        // Step 1 → Send to user webhook
         const response = await axios.post(newNote.webhookUrl, payload, {
           headers: { "Content-Type": "application/json" },
         });
         console.log("Webhook response status:", response.status);
 
-        const updatedPayload = {
-          status: "delivered",
-          deliveredAt: new Date(),
-          $push: {
-            attempts: {
-              at: new Date(),
-              statusCode: response.status,
-              ok: true,
-              error: null,
+        // Step 2 → If webhook succeeds, update DB and return
+        await Note.findByIdAndUpdate(
+          noteId,
+          {
+            status: "delivered",
+            deliveredAt: new Date(),
+            $push: {
+              attempts: {
+                at: new Date(),
+                statusCode: response.status,
+                ok: true,
+                error: null,
+              },
             },
           },
-        };
-
-        // Update the note in MongoDB
-        const updatedNote = await Note.findByIdAndUpdate(
-          noteId,
-          updatedPayload,
-          { new: true } // return the updated document
+          { new: true }
         );
-
-        if (!updatedNote) {
-          console.error("MongoDB update failed: note not found", newNote._id);
-        } else {
-          console.log("Job Completed and DB updated:", updatedNote._id);
-        }
 
         return { status: "delivered", noteId: newNote._id };
 
       } catch (err) {
-        console.error(`Job ${job.id} failed for note ${newNote._id}:`, err.message);
+        console.warn("Webhook failed → fallback to sink...");
 
-        // Update the note as failed
+        // Step 3 → Fallback to SINK with Idempotency Key
         try {
-          const failedUpdate = await Note.findByIdAndUpdate(
+          const sinkResponse = await axios.post(
+            "http://localhost:4000/sink",
+            payload,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                "X-Idempotency-Key": newNote._id.toString(),
+              },
+            }
+          );
+          console.log("Sink response:", sinkResponse.data);
+
+          // update delivery status in DB
+          await Note.findByIdAndUpdate(
             noteId,
             {
-              status: "failed",
+              status: "delivered-via-sink",
+              deliveredAt: new Date(),
               $push: {
                 attempts: {
                   at: new Date(),
-                  statusCode: err.response?.status || 500,
-                  ok: false,
-                  error: err.message,
+                  statusCode: sinkResponse.status,
+                  ok: true,
+                  error: null,
                 },
               },
             },
             { new: true }
           );
 
-          if (!failedUpdate) {
-            console.error("MongoDB update failed for failed job:", newNote._id);
-          }
-        } catch (dbErr) {
-          console.error("Error updating note as failed:", dbErr.message);
-        }
+          return { status: "delivered-via-sink", noteId: newNote._id };
 
-        throw err; // mark the job as failed in BullMQ
+        } catch (sinkErr) {
+          // both webhook and sink failed → mark as failed
+          await Note.findByIdAndUpdate(
+            noteId,
+            {
+              status: "failed",
+              $push: {
+                attempts: {
+                  at: new Date(),
+                  statusCode: sinkErr.response?.status || 500,
+                  ok: false,
+                  error: sinkErr.message,
+                },
+              },
+            },
+            { new: true }
+          );
+
+          throw sinkErr;
+        }
       }
     },
     { connection }
@@ -107,5 +123,4 @@ async function startWorker() {
   });
 }
 
-// Start the worker
 startWorker().catch((err) => console.error("Worker failed to start:", err));
