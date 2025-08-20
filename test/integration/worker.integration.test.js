@@ -1,8 +1,8 @@
-const request = require("supertest");
-const axios = require("axios");
-const app = require("../../api/index");            // Export your Express instance from index.js
-const myQueue = require("../../api/queue");
-const { vi, describe, it, expect, beforeAll, afterAll } = require("vitest");
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import request from "supertest";
+import app from "../../api/index.js";
+import myQueue from "../../api/queue.js";
+import axios from "axios";
 
 describe("Integration → create note + worker calls sink", () => {
   let axiosSpy;
