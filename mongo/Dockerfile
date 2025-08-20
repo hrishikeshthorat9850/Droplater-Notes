@@ -1,5 +1,4 @@
-# mongo/Dockerfile
-FROM mongo:latest
+FROM mongo:7
 
-# (Optional) copy seed or init scripts
-# COPY ./init /docker-entrypoint-initdb.d
+WORKDIR /data/db
+# No custom scripts needed if just running Mongo
