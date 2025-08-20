@@ -1,17 +1,20 @@
-# api/Dockerfile
-FROM node:20
+# Use Node.js 20
+FROM node:20-alpine
 
-# Create app directory
-WORKDIR /usr/src/app
+# Set working directory
+WORKDIR /app
+
+# Copy package files from root
+COPY package*.json ./
 
 # Install dependencies
-COPY package*.json ./
 RUN npm install
 
-# Copy source
+# Copy the entire project (except ignored files)
 COPY . .
 
-# Expose port (same as the port your Express API uses)
+# Expose API port
 EXPOSE 5000
 
-CMD ["node", "index.js"]
+# Start API server
+CMD ["node", "api/index.js"]

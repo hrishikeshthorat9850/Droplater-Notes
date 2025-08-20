@@ -1,13 +1,14 @@
 # worker/Dockerfile
-FROM node:20
+FROM node:20-alpine
 
-WORKDIR /usr/src/app
+# Set working directory inside container
+WORKDIR /app
 
-COPY package*.json ./
-RUN npm install
-
+# Copy the entire project into the container
 COPY . .
 
-# The worker might be a single “worker.js” file or a script in package.json
-# Adjust this to match your entry point
-CMD ["node", "worker.js"]
+# Install dependencies
+RUN npm install
+
+# Start the worker
+CMD ["node", "worker/worker.js"]

@@ -1,33 +1,64 @@
+version: "3.9"
+
 services:
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    ports:
+      - "27017:27017"
+
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+
   api:
-    build: ./api          # path to your Express API Dockerfile
+    build:
+      context: .
+      dockerfile: ./api/Dockerfile
+    container_name: api
     ports:
       - "5000:5000"
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/droplater
+      - REDIS_HOST=redis
     depends_on:
       - mongo
       - redis
 
   worker:
-    build: ./worker       # path to your background worker Dockerfile
+    build:
+      context: .
+      dockerfile: ./worker/Dockerfile
+    container_name: worker
     depends_on:
       - mongo
       - redis
-
-  mongo:
-    build: ./mongo
-    ports:
-      - "27017:27017"
-
-  redis:
-    build: ./redis
-    ports:
-      - "6379:6379"
-
-
+    environment :
+      - MONGO_URI=mongodb://mongo:27017/droplater
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
   sink:
-    build: ./sink         # path to your webhook receiver Dockerfile
+    build:
+      context: .
+      dockerfile: ./sink/Dockerfile
+    container_name: sink
     ports:
-      - "8080:8080"       # example port for sink
+      - "4000:4000"
     depends_on:
-      - mongo
       - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  admin:
+    build:
+      context: ./admin  # important: context is the admin folder
+      dockerfile: Dockerfile
+    container_name: admin
+    ports:
+      - "5173:80"       # host port 5173 maps to container port 80
+    depends_on:
+      - api
+
