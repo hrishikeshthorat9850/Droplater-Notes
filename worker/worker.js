@@ -1,14 +1,12 @@
-// worker.js
 const { Worker } = require("bullmq");
 const connection = require("../redis/redis");
 const axios = require("axios");
 const Note = require("../mongo/models/Notes");
 const dbConnection = require("../mongo/MongoClient");
 const mongoose = require("mongoose");
-
+console.log("✅Worker Starts...");
 async function startWorker() {
   await dbConnection();
-
   const worker = new Worker(
     "notes-queue",
     async (job) => {
@@ -26,13 +24,10 @@ async function startWorker() {
       };
 
       try {
-        // Step 1 → Send to user webhook
         const response = await axios.post(newNote.webhookUrl, payload, {
           headers: { "Content-Type": "application/json" },
         });
-        console.log("Webhook response status:", response.status);
 
-        // Step 2 → If webhook succeeds, update DB and return
         await Note.findByIdAndUpdate(
           noteId,
           {
@@ -51,25 +46,15 @@ async function startWorker() {
         );
 
         return { status: "delivered", noteId: newNote._id };
-
       } catch (err) {
         console.warn("Webhook failed → fallback to sink...");
-
-        // Step 3 → Fallback to SINK with Idempotency Key
         try {
           const sinkResponse = await axios.post(
             "http://localhost:4000/sink",
             payload,
-            {
-              headers: {
-                "Content-Type": "application/json",
-                "X-Idempotency-Key": newNote._id.toString(),
-              },
-            }
+            { headers: { "Content-Type": "application/json", "X-Idempotency-Key": newNote._id.toString() } }
           );
-          console.log("Sink response:", sinkResponse.data);
 
-          // update delivery status in DB
           await Note.findByIdAndUpdate(
             noteId,
             {
@@ -88,9 +73,7 @@ async function startWorker() {
           );
 
           return { status: "failed", noteId: newNote._id };
-
         } catch (sinkErr) {
-          // both webhook and sink failed → mark as failed
           await Note.findByIdAndUpdate(
             noteId,
             {
@@ -106,13 +89,14 @@ async function startWorker() {
             },
             { new: true }
           );
-
           throw sinkErr;
         }
       }
     },
     { connection }
   );
+
+  await new Promise((resolve) => worker.on("ready", resolve)); // wait until ready
 
   worker.on("completed", (job) => {
     console.log(`Job ${job.id} completed with return value:`, job.returnvalue);
@@ -121,6 +105,8 @@ async function startWorker() {
   worker.on("failed", (job, err) => {
     console.error(`Job ${job.id} failed with error:`, err.message);
   });
+
+  return worker; // return the worker so test can close it
 }
 
-startWorker().catch((err) => console.error("Worker failed to start:", err));
+module.exports = { startWorker };

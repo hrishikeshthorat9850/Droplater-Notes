@@ -16,7 +16,7 @@ const NoteZod = z.object({
     .refine((val) => !val || !isNaN(Date.parse(val)), {
       message: "Invalid ISO datetime",
     }),
-  webhookUrl: z.string(),
+  webhookUrl: z.string().url(),
   status: z.enum(["pending", "delivered", "failed", "dead"]).optional(),
   attempts: z.array(AttemptZod).optional(),
   deliveredAt: z.string().datetime().nullable().optional()

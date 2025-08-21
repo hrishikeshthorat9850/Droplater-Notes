@@ -113,5 +113,5 @@ curl -X POST http://localhost:5000/api/notes/<NOTE_ID>/replay
 ### Health Check (requires token)
 
 ```bash
-curl -H "Authorization: Bearer <your_token_here>" http://localhost:5000/health
+curl -H "Authorization: Bearer droplater&&notes&&assignment" http://localhost:5000/health
 ```

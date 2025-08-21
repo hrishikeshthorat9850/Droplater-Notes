@@ -12,7 +12,7 @@ async function dbConnection() {
   }
 
   try {
-    const connection = await mongoose.connect(process.env.MONGO_URI || "");
+    const connection = await mongoose.connect(process.env.MONGO_URL || "mongodb://mongo:27017/droplater");
     console.log("MongoDB connection success ✅");
     return connection;
   } catch (err) {
