@@ -1,11 +1,14 @@
+# sink/Dockerfile
 FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
+# Copy entire project (preserves relative paths)
+COPY . .
+
+# Install dependencies
 RUN npm install
 
-COPY sink/. .
-
 EXPOSE 4000
-CMD ["node", "sink.js"]
+
+CMD ["node", "sink/sink.js"]

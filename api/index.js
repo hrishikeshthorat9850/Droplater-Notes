@@ -131,3 +131,5 @@ app.post("/api/notes/:id/replay", async (req, res) => {
 }
 
 startServer();
+
+module.exports = app;
