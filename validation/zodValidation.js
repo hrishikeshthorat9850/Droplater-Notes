@@ -10,12 +10,7 @@ const AttemptZod = z.object({
 const NoteZod = z.object({
   title: z.string().min(1),
   body: z.string().min(1),
-  releaseAt: z
-    .string()
-    .optional()
-    .refine((val) => !val || !isNaN(Date.parse(val)), {
-      message: "Invalid ISO datetime",
-    }),
+  releaseAt: z.string().datetime({offset:true}),
   webhookUrl: z.string().url(),
   status: z.enum(["pending", "delivered", "failed", "dead"]).optional(),
   attempts: z.array(AttemptZod).optional(),

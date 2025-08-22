@@ -10,6 +10,9 @@ const authMiddleware = require("../middleware/auth");
 const myQueue = require("../api/queue");
 const app = express();
 const mongoose = require("mongoose");
+const dayjs = require("dayjs");
+const utc = require("dayjs/plugin/utc");
+dayjs.extend(utc);
 // Allow all origins for development
 app.use(cors());
 app.use(express.json());
@@ -19,7 +22,9 @@ const limiter = rateLimit({
   windowMs: 60 * 1000,
   max: 60,
 });
+
 app.use(limiter);
+
 const PORT = process.env.PORT || 5000;
 
 async function startServer() {
@@ -31,34 +36,48 @@ async function startServer() {
     try {
       // Parse and validate request body
       const parsedData = NoteZod.parse(req.body);
+      const releaseTimeUTC = dayjs(parsedData.releaseAt).utc().toISOString();
 
       // Auto-set releaseAt and default status if missing
       const noteData = {
         ...parsedData,
-        releaseAt: parsedData.releaseAt,
+         releaseAt: releaseTimeUTC,
         status: parsedData.status || "pending",
       };
 
       // Insert into MongoDB
       const newNote = await Note.create(noteData);
 
-      //Add to Queue
-      await myQueue.add("notes",
-        {newNote},
-        {delay : 60 * 500});    
-      // Send success response
-      res.json({ 
-        message: "Note created successfully & added to the queue...", 
-        data:{
-          id : newNote._id,...newNote.toObject()
+      // --- 🔹 Compute delay until releaseAt (UTC safe) ---
+      const now = dayjs.utc();
+      const releaseTime = dayjs.utc(releaseTimeUTC);
+      const delay = Math.max(0, releaseTime.diff(now, "millisecond")); // avoid negative
+
+      console.log(`⏳ Scheduling note ${newNote._id} for ${releaseTime.toISOString()} with delay=${delay}ms`);
+
+      // Add to Queue with calculated delay
+      await myQueue.add(
+        "notes",
+        { newNote },
+        {
+          delay,
+          removeOnComplete: true,
+          removeOnFail: false,
         }
-    });
+      );
+
+      // Send success response
+      res.json({
+        message: "Note created successfully & added to the queue...",
+        data: {
+          id: newNote._id,
+          ...newNote.toObject(),
+        },
+      });
     } catch (err) {
-      // Handle Zod validation errors
       if (err.name === "ZodError") {
         return res.status(400).json({ errors: err.errors });
       }
-
       console.error("Server error:", err);
       res.status(500).json({ error: "Internal server error" });
     }

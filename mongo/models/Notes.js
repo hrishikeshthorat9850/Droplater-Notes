@@ -10,7 +10,7 @@ const AttemptSchema = new mongoose.Schema({
 const NoteSchema = new mongoose.Schema({
   title: { type: String, required: true },
   body: { type: String, required: true },
-  releaseAt: { type: Date, default: () => new Date(Date.now() - 1000) }, // 1 second ago
+  releaseAt: { type: Date, required:true},
   webhookUrl: { type: String, required: true },
   status: { 
     type: String, 
