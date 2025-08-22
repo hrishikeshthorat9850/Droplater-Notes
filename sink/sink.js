@@ -17,10 +17,7 @@ app.post("/sink", async (req, res) => {
     }
 
     // SETNX: set if not exists, expire in 1 day (86400 seconds)
-    const set = await connection.set(idempotencyKey, "1", {
-      NX: true,
-      EX: 86400,
-    });
+    const set = await connection.set(idempotencyKey, "1", "NX", "EX", 86400);
 
     if (!set) {
       // Key already exists → duplicate
@@ -38,6 +35,6 @@ app.post("/sink", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Sink service running on http://localhost:${PORT}`);
+app.listen(PORT,'0.0.0.0', () => {
+  console.log(`Sink service running on ${process.env.SINK_URL}`);
 });

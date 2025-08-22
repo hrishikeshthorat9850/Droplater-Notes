@@ -5,7 +5,10 @@ services:
     image: mongo:7
     container_name: mongo
     ports:
-      - "27017:27017"
+      - "27018:27017"
+    volumes:
+      - mongo_data:/data/db
+    command: ["mongod", "--quiet"]
 
   redis:
     image: redis:7
@@ -39,6 +42,8 @@ services:
       - MONGO_URI=mongodb://mongo:27017/droplater
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - SINK_URL=http://sink:4000/sink  # Docker internal URL
+
   sink:
     build:
       context: .
@@ -63,3 +68,5 @@ services:
     depends_on:
       - api
 
+volumes:
+  mongo_data :

@@ -5,14 +5,14 @@ dotenv.config({ path: path.join(__dirname, "../.env") }); // load .env from pare
 const mongoose = require("mongoose");
 
 console.log("MongoUrl is", process.env.MONGO_URL);
-
+console.log("MongoURI is :",process.env.MoNGO_URI);
 async function dbConnection() {
   if (!process.env.MONGO_URI) {
     throw new Error("MONGO_URI is not defined in .env");
   }
 
   try {
-    const connection = await mongoose.connect(process.env.MONGO_URL || "mongodb://mongo:27017/droplater");
+    const connection = await mongoose.connect(process.env.MONGO_URL || process.env.MONGO_URI);
     console.log("MongoDB connection success ✅");
     return connection;
   } catch (err) {
