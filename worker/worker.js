@@ -89,7 +89,7 @@ async function startWorker() {
         try {
           // 🔹 Try sink with retries
           const sinkResponse = await deliverWithRetry(
-            "http://localhost:4000/sink",
+            process.env.SINK_URL,
             payload,
             {
               "Content-Type": "application/json",
