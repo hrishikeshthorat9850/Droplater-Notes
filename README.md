@@ -38,21 +38,6 @@
 curl http://localhost:5000/
 ```
 
-### Create a Note (POST)
-
-```bash
-curl -X POST http://localhost:5000/notes \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Test Note",
-    "body": "This is a test note",
-    "webhookUrl": "http://localhost:4000/sink",
-    "releaseAt": "2025-12-01T10:00:00.000Z"
-  }'
-```
-
----
-
 ## ⚙️ Environment Variables
 
 The application loads environment variables from the `.env` file at the project root.

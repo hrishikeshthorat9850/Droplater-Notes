@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+dayjs.extend(utc);
 
 export default function NotesPage() {
   const { register, handleSubmit, reset } = useForm();
@@ -23,10 +26,16 @@ export default function NotesPage() {
 
   // Create note
   const onSubmit = async (values) => {
+    const payload = {
+      ...values,
+      releaseAt: values.releaseAt
+        ? dayjs(values.releaseAt).utc().toISOString()
+        : null,
+    };
     await fetch("http://localhost:5000/api/notes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values),
+      body: JSON.stringify(payload),
     });
     reset();
     fetchNotes();

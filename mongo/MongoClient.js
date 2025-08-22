@@ -4,7 +4,7 @@ dotenv.config({ path: path.join(__dirname, "../.env") }); // load .env from pare
 
 const mongoose = require("mongoose");
 
-console.log("MongoUrl is", process.env.MONGO_URI);
+console.log("MongoUrl is", process.env.MONGO_URL);
 
 async function dbConnection() {
   if (!process.env.MONGO_URI) {
